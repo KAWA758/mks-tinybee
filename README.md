@@ -17,7 +17,7 @@ Wymagane biblioteki SPI, EEPROM, ArduinoOTA, ESPmDNS, WiFi, FS, SPIFFS i Wire do
 
 Pełny przewodnik dla właściciela: [uruchomienie i obsługa projektu](docs/uruchomienie.md). Dla autora aplikacji Windows sterowanej padem: [kontrakt serial/G-code](docs/serial-protocol.md).
 
-Firmware nie został jeszcze wgrany ani przetestowany ruchowo. Obecne domyślne parametry drukarki wymagają kalibracji przed sterowaniem ramieniem.
+Firmware nie został jeszcze wgrany ani przetestowany ruchowo. Parametry ramienia edytuj w **[Marlin/RobotSettings.h](Marlin/RobotSettings.h)**; [opis wszystkich ustawień](docs/parametry.md). Domyślny profil rozruchowy: około 15,802469 impulsu/°, maks. 2°/s, przyspieszenie 10°/s², tymczasowe granice ±5° i brak automatycznego zwalniania silników. Założenie mikrokroku 1/8 wymaga sprawdzenia na sprzęcie.
 
 Zainstaluj PlatformIO Core lub rozszerzenie PlatformIO IDE do VS Code. W VS Code otwórz główny folder repozytorium, zawierający `platformio.ini`.
 
@@ -46,7 +46,7 @@ Zastąp `COM7` rzeczywistym portem płyty. Port nie jest zapisany w konfiguracji
 
 Mechanizm utrzymuje głowicę w poziomie. Skoordynowany ruch przegubów X i Y pozwala zmieniać wysokość głowicy przy zachowaniu jej odległości od osi podstawy. Oznaczenia X/Y/Z w obecnym firmware odnoszą się do napędów przegubów, a nie współrzędnych kartezjańskich głowicy. W szczególności polecenie ruchu Z obraca podstawę.
 
-Parametry w `Marlin/Configuration.h` i `Marlin/Configuration_adv.h` zachowano z wcześniejszego projektu. Kroki, zakresy, prędkości i przyspieszenia wymagają dopasowania do mechaniki ramienia. To sterowanie osiami przegubów; projekt nie implementuje kinematyki odwrotnej ramienia.
+Parametry ruchu są pobierane z `Marlin/RobotSettings.h`. Korekty skali, zakresy i kierunki wymagają kalibracji na sprzęcie. To sterowanie osiami przegubów; projekt nie implementuje kinematyki odwrotnej ramienia.
 
 Instrukcja testowania i założenia mechaniczne: [docs/ramie-xyz.md](docs/ramie-xyz.md).
 

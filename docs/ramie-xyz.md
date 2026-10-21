@@ -37,9 +37,7 @@ Karta dostarczonego silnika 17HE15-1504S potwierdza 1,8°, czyli 200 kroków/obr
 impulsy na obrót wyjścia = 200 × 8 × 32/9 = 5688,8889.
 impulsy na stopień wyjścia = 5688,8889 / 360 = 15,802469.
 
-Wartości kroków, prędkości, przyspieszeń i zakresy osi w Configuration.h
-pozostają wartościami bazowymi Marlina, a nie kalibracją ramienia.
-Nie wprowadzono powyższego przelicznika do domyślnych ustawień: pozostaje potwierdzenie mikrokroku konkretnych modułów i identyczności napędów. Procedura zastosowania profilu do testu: [uruchomienie.md](uruchomienie.md).
+Parametry są scentralizowane w Marlin/RobotSettings.h: przelicznik jest obliczany automatycznie przy założeniu mikrokroku 1/8. Profil ma niskie prędkości i tymczasowe granice ±5°, ale nie jest kalibracją sprzętu. Pozostaje sprawdzenie mikrokroku i identyczności napędów. Opis ustawień: [parametry.md](parametry.md), testy: [uruchomienie.md](uruchomienie.md).
 Przy przyjęciu 1 jednostka = 1 stopień, prędkość F będzie podawana
 w stopniach na minutę. Marlin nadal opisuje jednostki jako mm.
 To sterowanie osiami przegubów; nie zaimplementowano kinematyki ramienia.
@@ -49,6 +47,6 @@ To sterowanie osiami przegubów; nie zaimplementowano kinematyki ramienia.
 Nie wykonywać G28: nie ma fizycznych krańcówek do bazowania.
 Ustawić ramię w znanej pozycji i przypisać współrzędne przez G92.
 Limity programowe wymagają ustalenia rzeczywistych zakresów X/Y/Z.
-Obecne limity są domyślnymi granicami drukarki, nie ramienia.
+Obecne limity ±5° są tymczasowym oknem testowym względem ręcznego zera, a nie zmierzonymi granicami ramienia.
 Po zaniku zasilania, zgubieniu kroków lub ręcznym przestawieniu osi
 ponownie ustalić pozycję odniesienia.

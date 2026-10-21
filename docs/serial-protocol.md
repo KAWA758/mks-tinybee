@@ -6,7 +6,7 @@ Status: kontrakt do implementacji i testów; brak testu na fizycznej płycie. Au
 
 Firmware: impulsy STEP/DIR, skoordynowana realizacja zadanych ruchów osi, ograniczenia prędkości/przyspieszeń, granice ustawione w firmware. Aplikacja Windows: pad, mapowanie wejść, profil sprzętu, pozycja odniesienia, kontrola zakresów/kolizji, planowanie krótkich ruchów i serial. Nie trzeba implementować aplikacji w tym repo; można utrzymywać oddzielne repo i uzgadniać wersję tego kontraktu.
 
-Na start aplikacja działa w trybie przegubowym: X = napęd pierwszego przegubu, Y = drugiego, Z = obrót podstawy. W profilu skalibrowanym 1 jednostka G-code = 1° wyjścia przekładni. Odczytuj M503 i sprawdzaj profil przed odblokowaniem ruchu. Obecne domyślne M92 `{80,80,400}` nie spełnia kontraktu stopni — sam G21 tego nie naprawia.
+Na start aplikacja działa w trybie przegubowym: X = napęd pierwszego przegubu, Y = drugiego, Z = obrót podstawy. W profilu skalibrowanym 1 jednostka G-code = 1° wyjścia przekładni. Odczytuj M503 i sprawdzaj profil przed odblokowaniem ruchu. Bieżące domyślne M92 jest wyliczane z RobotSettings.h (około 15,802469 dla każdej osi przy obecnych założeniach). Sprawdź zgodność z fizycznym mikrokrokiem; sam G21 nie ustawia skali. Domyślne limity testowe to ±5°, prędkości 2°/s i przyspieszenia 10°/s²; źródłem aktualnych wartości jest plik, nie stała zaszyta w aplikacji.
 
 Tryb kartezjański pozostaje niedostępny do zatwierdzenia kinematyki. Aplikacja ma używać odrębnych nazw, np. `baseAngle`, `joint1DriveAngle`, `joint2DriveAngle` oraz `radiusMm`, `heightMm`. Nie traktować G-code Z jako wysokości. Mechaniczne poziomowanie głowicy nie oznacza kompensacji X:Y równej 1:1. Długości 120/120 mm są potwierdzone, lecz zera i relacja napędów do kątów członów wymagają pomiaru. Jedna interpolowana linia ruchu przegubów nie gwarantuje prostej trajektorii głowicy.
 
@@ -19,7 +19,7 @@ Tryb kartezjański pozostaje niedostępny do zatwierdzenia kinematyki. Aplikacja
 - Komendy wysyłane kolejno po `ok`. `ok` może zawierać dodatkowe pola. `echo:`, `busy:`, `wait`, raporty pozycji i bootlog nie są potwierdzeniem komendy. `Error:` zatrzymuje nadawanie i wymaga obsługi błędu.
 - Timeout konfigurowalny; dla M400 uwzględnić czas ruchu. Nie ponawiać automatycznie G0/G1 po timeout: ruch mógł zostać wykonany mimo utraconej odpowiedzi.
 
-Sekwencja połączenia bez ruchu: synchronizacja po starcie, `M115`, `M503`, `M114`, każda komenda z potwierdzeniem. Nie wysyłać automatycznie M17, G28, G92, M18 ani ruchu. Użytkownik osobno zatwierdza profil kalibracji oraz fizyczny punkt odniesienia. EEPROM jest wyłączone, więc profil runtime znika po resecie.
+Sekwencja połączenia bez ruchu: synchronizacja po starcie, `M115`, `M503`, `M114`, każda komenda z potwierdzeniem. Nie wysyłać automatycznie M17, G28, G92, M18 ani ruchu. Użytkownik osobno zatwierdza profil kalibracji oraz fizyczny punkt odniesienia. EEPROM jest wyłączone, więc nadpisania runtime znikają po resecie i wracają stałe z RobotSettings.h.
 
 ## Potwierdzenie i zakończenie ruchu
 
@@ -41,9 +41,9 @@ Do trybu ciągłego preferować krótkie cele absolutne G90 z lokalnie śledzony
 - M410: szybkie zatrzymanie po obsłużeniu komendy. Usunąć niewysłaną kolejkę i uznać odniesienie za wymagające weryfikacji.
 - M112: pełne wyłączenie; może zwolnić napędy i spowodować opadnięcie ramienia. Wymaga restartu i ponownego odniesienia. Nie używać jako zwykłego STOP od puszczenia gałki.
 - Ten HAL ESP32 odrzuca EMERGENCY_PARSER podczas kompilacji (`Marlin/src/HAL/ESP32/inc/SanityCheck.h`). M112/M410 idą zwykłą ścieżką odbioru i nie mają gwarancji natychmiastowej obsługi. Szczególnie M400 może blokować ich wykonanie do końca ruchu. Priorytet wysyłki w aplikacji nie zmienia tej właściwości firmware.
-- Utrata USB nie zatrzymuje sama już przyjętej trajektorii. Obecny firmware nie ma wdrożonego watchdogu sterowania padem. Nie polegać na timeout 120 s jako zabezpieczeniu ruchu.
+- Utrata USB nie zatrzymuje sama już przyjętej trajektorii. Obecny firmware nie ma wdrożonego watchdogu sterowania padem. Domyślnie timeout zwalniania napędów wynosi 0 (brak automatycznego zwalniania), co nie jest zabezpieczeniem ruchu.
 - Fizyczny sposób odcięcia napędu i podparcie mechanizmu są konieczne podczas testów. Nie deklarować programowego STOP jako sprzętowego E-stopu.
-- Po M18/M84, resecie, ręcznym ruchu albo zgubieniu kroków zablokować ruch do ponownego ustalenia pozycji. Domyślne granice firmware nie opisują bezpiecznej przestrzeni tego ramienia.
+- Po M18/M84, resecie, ręcznym ruchu albo zgubieniu kroków zablokować ruch do ponownego ustalenia pozycji. Domyślne granice ±5° względem roboczego zera nie opisują pełnej bezpiecznej przestrzeni ramienia.
 
 ## Kryteria odbioru frontendu
 

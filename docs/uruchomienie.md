@@ -2,7 +2,7 @@
 
 ## Stan projektu
 
-Firmware jest kompilowalny, ale według potwierdzenia właściciela nie został jeszcze wgrany na płytę. Nie przeprowadzono testów ruchu na sprzęcie. Konfiguracja nadal ma drukarkowe wartości kroków, prędkości, przyspieszeń i granic; nie jest gotowym profilem ruchowym ramienia.
+Firmware jest kompilowalny, ale według potwierdzenia właściciela nie został jeszcze wgrany na płytę. Nie przeprowadzono testów ruchu na sprzęcie. Konfiguracja ma profil rozruchowy z `Marlin/RobotSettings.h`, opisany w [parametry.md](parametry.md). Nie jest jeszcze skalibrowana na sprzęcie.
 
 Potwierdzone dane: człony 120/120 mm; Z = podstawa, X = pierwszy napęd przegubu, Y = drugi napęd przegubu; mechaniczne poziomowanie głowicy; brak enkoderów. Silnik z dostarczonej karty STEPPERONLINE 17HE15-1504S: 1,8° (200 pełnych kroków/obrót), 1,50 A, 2,30 Ω, 4,00 mH, moment trzymający 0,42 Nm. Potwierdzić, że wszystkie trzy silniki są tego samego typu.
 
@@ -26,7 +26,7 @@ cd mks-tinybee
 git switch -c firmware/nazwa-zmiany
 ```
 
-Otwórz ten główny folder w VS Code. Zainstaluj PlatformIO IDE. Pliki do typowych zmian: `Marlin/Configuration.h`, `Marlin/Configuration_adv.h`, `ini/esp32.ini`. Zachowaj przypięte wersje narzędzi. Nie aktualizuj frameworka ESP32 niezależnie od Marlina.
+Otwórz ten główny folder w VS Code. Zainstaluj PlatformIO IDE. Wszystkie typowe parametry ruchu zmieniaj w `Marlin/RobotSettings.h`. `Configuration.h` i `Configuration_adv.h` są adapterami do Marlina; `ini/esp32.ini` zawiera konfigurację narzędzi PlatformIO. Zachowaj przypięte wersje narzędzi. Nie aktualizuj frameworka ESP32 niezależnie od Marlina.
 
 ```powershell
 pio run -e mks_tinybee
@@ -61,7 +61,7 @@ Poniższy przykład wymaga trzech jednakowych silników 1,8°, mikrokroku 1/8 i 
 
 Najpierw ustaw ręcznie bezpieczną, oznaczoną pozycję z luzem na mały ruch w obie strony i ponownie włącz napędy. Zapisz jej fizyczne położenie; robocze zero nie jest zerem geometrii z rysunku. Od chwili włączenia napędów nie przestawiaj ramienia ręcznie.
 
-Wyślij po jednej linii, czekając na `ok`:
+Bieżący build ma już obliczone M92 i niskie limity z RobotSettings.h. Najpierw sprawdź M503; nie nadpisuj go starym profilem z aplikacji. Poniżej równoważne nastawy startowe i ręczne ustalenie zera (wyślij po jednej linii, czekając na `ok`):
 
 ```gcode
 M92 X15.802469 Y15.802469 Z15.802469
@@ -77,12 +77,12 @@ Po tym profilu 1 jednostka oznacza 1° obrotu napędu. Marlin nadal opisuje ją 
 
 Najpierw sprawdź samą podstawę: `G91`, następnie `G1 Z0.5 F30`, następnie `M400`. Dopiero po zakończeniu i ocenie fizycznego ruchu wróć przez `G1 Z-0.5 F30`, `M400`, `G90`. Daje to pół stopnia przy zadanej prędkości 0,5°/s. Jeśli ruch nie odpowiada oczekiwaniu, przerwij kalibrację.
 
-X i Y testuj osobno dopiero po zapewnieniu podparcia i sprawdzeniu kolizji mechanizmu. Nie uruchamiaj G28 bez działającego, skonfigurowanego bazowania. Nie wyłączaj globalnie limitów M211 w celu obejścia nieznanej geometrii. Obecne domyślne granice 0…200 nie są potwierdzonymi zakresami ramienia.
+X i Y testuj osobno dopiero po zapewnieniu podparcia i sprawdzeniu kolizji mechanizmu. Nie uruchamiaj G28 bez działającego, skonfigurowanego bazowania. Nie wyłączaj globalnie limitów M211 w celu obejścia nieznanej geometrii. Obecne granice ±5° są tylko tymczasowym oknem rozruchowym i nie są potwierdzonymi zakresami mechaniki.
 
-Po resecie trzeba ponownie zastosować profil i ustalić pozycję odniesienia. Po M18/M84, utracie kroków lub przestawieniu ręcznym pozycja fizyczna jest nieznana. Napędy obecnie wyłączają się po 120 s bezczynności; ramię może opaść. Dla podpartej, nadzorowanej sesji można użyć `M84 S0`, lecz trzeba kontrolować temperaturę i świadomie zakończyć sesję.
+Reset przywraca parametry wgrane z RobotSettings.h; trzeba ponownie ustalić fizyczną pozycję odniesienia. Zmiany parametrów dokonane G-code w poprzedniej sesji znikają. Po M18/M84, utracie kroków lub przestawieniu ręcznym pozycja fizyczna jest nieznana. Domyślnie ROBOT_IDLE_TIMEOUT_SEC=0: napędy nie zwalniają się automatycznie po bezczynności. Trzeba kontrolować temperaturę i świadomie zakończyć sesję. Jawne M18/M84 nadal zwalnia napędy i może spowodować opadnięcie ramienia.
 
 ## Dalsza kalibracja
 
-Zmierzyć rzeczywisty kąt po zadaniu znanego małego obrotu. Korekta: `nowe_steps = stare_steps × kąt_zadany / kąt_zmierzony`. Oddzielnie ustalić znaki napędów, zera geometrii, zakresy oraz kolizje zależne od pary X/Y. Dopiero zweryfikowane wartości przenieść do domyślnych ustawień firmware.
+Zmierzyć rzeczywisty kąt po zadaniu znanego małego obrotu. Korekta: `nowe_steps = stare_steps × kąt_zadany / kąt_zmierzony`. Oddzielnie ustalić znaki napędów, zera geometrii, zakresy oraz kolizje zależne od pary X/Y. Zweryfikowane wartości wpisuj do RobotSettings.h i ponownie kompiluj/wgrywaj firmware.
 
 Źródła: [TMC2209, tabela konfiguracji MS1/MS2](https://www.analog.com/media/en/technical-documentation/data-sheets/tmc2209_datasheet_rev1.08.pdf), [polecenia Marlina](https://marlinfw.org/meta/gcode/).

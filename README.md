@@ -15,6 +15,10 @@ Wymagane biblioteki SPI, EEPROM, ArduinoOTA, ESPmDNS, WiFi, FS, SPIFFS i Wire do
 
 ## Budowanie
 
+Pełny przewodnik dla właściciela: [uruchomienie i obsługa projektu](docs/uruchomienie.md). Dla autora aplikacji Windows sterowanej padem: [kontrakt serial/G-code](docs/serial-protocol.md).
+
+Firmware nie został jeszcze wgrany ani przetestowany ruchowo. Obecne domyślne parametry drukarki wymagają kalibracji przed sterowaniem ramieniem.
+
 Zainstaluj PlatformIO Core lub rozszerzenie PlatformIO IDE do VS Code. W VS Code otwórz główny folder repozytorium, zawierający `platformio.ini`.
 
 ```sh

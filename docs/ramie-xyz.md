@@ -27,19 +27,19 @@ Do wyznaczenia kinematyki potrzebne są odległości między osiami przegubów,
 położenie punktu głowicy, geometria mechanizmu poziomującego oraz definicje
 pozycji zerowych i dodatnich kierunków obrotu X/Y/Z.
 
-## Kalibracja oczekująca na dane
+## Kalibracja
 
 Koło silnika: 9 zębów. Koło wyjścia: 32 zęby.
 Brak zworek; dla TMC2209 MS1=MS2=0 oznacza 1/8 kroku.
 Potwierdzić konfigurację konkretnego modułu sterownika.
 
-Jeżeli silnik ma 200 kroków/obrót i mikrokrok 1/8:
+Karta dostarczonego silnika 17HE15-1504S potwierdza 1,8°, czyli 200 kroków/obrót, oraz prąd 1,50 A. Przy mikrokroku 1/8:
 impulsy na obrót wyjścia = 200 × 8 × 32/9 = 5688,8889.
 impulsy na stopień wyjścia = 5688,8889 / 360 = 15,802469.
 
 Wartości kroków, prędkości, przyspieszeń i zakresy osi w Configuration.h
 pozostają wartościami bazowymi Marlina, a nie kalibracją ramienia.
-Nie wprowadzono powyższego przelicznika bez potwierdzenia silników.
+Nie wprowadzono powyższego przelicznika do domyślnych ustawień: pozostaje potwierdzenie mikrokroku konkretnych modułów i identyczności napędów. Procedura zastosowania profilu do testu: [uruchomienie.md](uruchomienie.md).
 Przy przyjęciu 1 jednostka = 1 stopień, prędkość F będzie podawana
 w stopniach na minutę. Marlin nadal opisuje jednostki jako mm.
 To sterowanie osiami przegubów; nie zaimplementowano kinematyki ramienia.

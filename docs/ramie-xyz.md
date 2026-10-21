@@ -7,6 +7,26 @@ Skonfigurowano BOARD_MKS_TINYBEE, trzy osie XYZ, TMC2209_STANDALONE,
 EXTRUDERS=0 oraz brak czujników temperatury hotendu i stołu.
 Kompilacja PlatformIO zakończona powodzeniem.
 
+## Układ mechaniczny
+
+- Z: obrót podstawy.
+- X: pierwszy przegub od podstawy.
+- Y: drugi przegub, ruch góra–dół.
+
+Głowica jest utrzymywana w poziomie przez mechanikę ramienia.
+Jednoczesne sterowanie pierwszym i drugim przegubem pozwala podnosić
+głowicę bez zmiany jej odległości od osi podstawy.
+
+X/Y/Z w poleceniach obecnego firmware oznaczają osie napędów.
+Z nie oznacza wysokości głowicy. Ruch pionowy głowicy wymaga wyznaczenia
+trajektorii obu przegubów X i Y na podstawie geometrii mechanizmu.
+Stała orientacja głowicy nie określa sama w sobie proporcji ruchu X do Y;
+nie przyjęto zależności 1:1 ani stałego kierunku kompensacji.
+
+Do wyznaczenia kinematyki potrzebne są odległości między osiami przegubów,
+położenie punktu głowicy, geometria mechanizmu poziomującego oraz definicje
+pozycji zerowych i dodatnich kierunków obrotu X/Y/Z.
+
 ## Kalibracja oczekująca na dane
 
 Koło silnika: 9 zębów. Koło wyjścia: 32 zęby.

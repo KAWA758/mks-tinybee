@@ -34,6 +34,14 @@ Zastąp `COM7` rzeczywistym portem płyty. Port nie jest zapisany w konfiguracji
 
 ## Ustawienia ramienia
 
+| Oś sterownika | Element mechaniczny |
+| --- | --- |
+| Z | Obrót podstawy |
+| X | Pierwszy przegub od podstawy |
+| Y | Drugi przegub, ruch góra–dół |
+
+Mechanizm utrzymuje głowicę w poziomie. Skoordynowany ruch przegubów X i Y pozwala zmieniać wysokość głowicy przy zachowaniu jej odległości od osi podstawy. Oznaczenia X/Y/Z w obecnym firmware odnoszą się do napędów przegubów, a nie współrzędnych kartezjańskich głowicy. W szczególności polecenie ruchu Z obraca podstawę.
+
 Parametry w `Marlin/Configuration.h` i `Marlin/Configuration_adv.h` zachowano z wcześniejszego projektu. Kroki, zakresy, prędkości i przyspieszenia wymagają dopasowania do mechaniki ramienia. To sterowanie osiami przegubów; projekt nie implementuje kinematyki odwrotnej ramienia.
 
 Instrukcja testowania i założenia mechaniczne: [docs/ramie-xyz.md](docs/ramie-xyz.md).

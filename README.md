@@ -17,6 +17,8 @@ Wymagane biblioteki SPI, EEPROM, ArduinoOTA, ESPmDNS, WiFi, FS, SPIFFS i Wire do
 
 Pełny przewodnik dla właściciela: [uruchomienie i obsługa projektu](docs/uruchomienie.md). Dla autora aplikacji Windows sterowanej padem: [kontrakt serial/G-code](docs/serial-protocol.md).
 
+Do oddzielnego sprawdzenia USB i wgrywania służy [minimalny test serial bez Marlina](tools/serial-smoke-test/README.md). Wgranie testu zastępuje aplikację ramienia.
+
 Firmware nie został jeszcze wgrany ani przetestowany ruchowo. Parametry ramienia edytuj w **[Marlin/RobotSettings.h](Marlin/RobotSettings.h)**; [opis wszystkich ustawień](docs/parametry.md). Domyślny profil rozruchowy: około 15,802469 impulsu/°, maks. 2°/s, przyspieszenie 10°/s², tymczasowe granice ±5° i brak automatycznego zwalniania silników. Założenie mikrokroku 1/8 wymaga sprawdzenia na sprzęcie.
 
 Zainstaluj PlatformIO Core lub rozszerzenie PlatformIO IDE do VS Code. W VS Code otwórz główny folder repozytorium, zawierający `platformio.ini`.

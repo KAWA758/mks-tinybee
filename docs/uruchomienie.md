@@ -2,7 +2,9 @@
 
 ## Stan projektu
 
-Firmware jest kompilowalny, ale według potwierdzenia właściciela nie został jeszcze wgrany na płytę. Nie przeprowadzono testów ruchu na sprzęcie. Konfiguracja ma profil rozruchowy z `Marlin/RobotSettings.h`, opisany w [parametry.md](parametry.md). Nie jest jeszcze skalibrowana na sprzęcie.
+Marlin 2.1.2.5 wgrano na płytę 25.10.2026 z `main`, commit `2e22719`. Upload przez COM14 zakończył się SUCCESS z weryfikacją danych flash. Przy 250000 baud potwierdzono odpowiedzi `ok` dla M115, M503 i M114; odczytano M92 X/Y/Z=15.80 (raport zaokrąglony), M203 X/Y/Z=2.00 oraz M201 X/Y/Z=10.00. Nie przeprowadzono testów ruchu na sprzęcie. Konfiguracja ma profil rozruchowy z `Marlin/RobotSettings.h`, opisany w [parametry.md](parametry.md). Nie jest jeszcze skalibrowana na sprzęcie.
+
+M114 po uruchomieniu zgłosiło X/Y/Z=-5.00; jest to stan logiczny firmware, nie pomiar położenia fizycznego. Przed pierwszym ruchem nadal trzeba świadomie ustalić punkt odniesienia. Nie wykonano G28, G92 ani ruchów podczas tej weryfikacji.
 
 Potwierdzone dane: człony 120/120 mm; Z = podstawa, X = pierwszy napęd przegubu, Y = drugi napęd przegubu; mechaniczne poziomowanie głowicy; brak enkoderów. Silnik z dostarczonej karty STEPPERONLINE 17HE15-1504S: 1,8° (200 pełnych kroków/obrót), 1,50 A, 2,30 Ω, 4,00 mH, moment trzymający 0,42 Nm. Potwierdzić, że wszystkie trzy silniki są tego samego typu.
 

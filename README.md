@@ -19,6 +19,8 @@ Pełny przewodnik dla właściciela: [uruchomienie i obsługa projektu](docs/uru
 
 Do oddzielnego sprawdzenia USB i wgrywania służy [minimalny test serial bez Marlina](tools/serial-smoke-test/README.md). Wgranie testu zastępuje aplikację ramienia.
 
+[Poprawka resetu CH340 w Windows](docs/windows-upload.md) jest włączona dla środowiska TinyBee. Wgranie i wykonanie programu minimalnego potwierdzono na sprzęcie; Marlin pozostaje bez testów ruchowych.
+
 Firmware nie został jeszcze wgrany ani przetestowany ruchowo. Parametry ramienia edytuj w **[Marlin/RobotSettings.h](Marlin/RobotSettings.h)**; [opis wszystkich ustawień](docs/parametry.md). Domyślny profil rozruchowy: około 15,802469 impulsu/°, maks. 2°/s, przyspieszenie 10°/s², tymczasowe granice ±5° i brak automatycznego zwalniania silników. Założenie mikrokroku 1/8 wymaga sprawdzenia na sprzęcie.
 
 Zainstaluj PlatformIO Core lub rozszerzenie PlatformIO IDE do VS Code. W VS Code otwórz główny folder repozytorium, zawierający `platformio.ini`.

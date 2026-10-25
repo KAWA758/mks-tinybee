@@ -28,3 +28,11 @@ Po powrocie ponownie ustal fizyczną pozycję odniesienia. Wyniki kompilacji `.p
 ## Wynik próby 25.10.2026
 
 Program skompilował się: Flash 216831 B, RAM 15444 B. Próba uploadu na COM13, przy CH340 3.7.2022.1 i esptool 3.0, zakończyła się `Failed to connect to ESP32: Timed out waiting for packet header` na etapie `Connecting`, przed zapisem flash. Nie zweryfikowano wykonania heartbeat na płycie. Ten sam rodzaj błędu występował przy Marlinie, co wyklucza kod aplikacji Marlin jako przyczynę tego konkretnego błędu połączenia; nie ustala jeszcze przyczyny problemu resetu/transportu.
+
+### Porównanie z działającym laptopem
+
+Według notatki przekazanej przez właściciela na innym komputerze zadziałały: Windows 11 build 26200, CH340 3.9.2024.9, esptool 3.0, upload 460800 baud, flash 8 MB / DIO / 40 MHz, monitor 115200 baud, PlatformIO 6.2.0, espressif32 2.1.0, Python 3.14.6 i pyserial 3.5.
+
+Na diagnozowanym komputerze przywrócono oryginalny sterownik CH340 3.9.2024.9 (potwierdzony w Plug and Play). Próba na COM13 z uploadem 460800, DIO i 40 MHz nadal zakończyła się timeoutem synchronizacji. Osobne sprawdzenie esptool 3.0 pod przenośnym Pythonem 3.14.6 oraz wgranie z procesu administratora także nie uzyskały połączenia. Żadna z tych prób nie rozpoczęła zapisu firmware.
+
+Zmiana samej wersji sterownika, Pythona lub prędkości uploadu nie została potwierdzona jako rozwiązanie. Esptool 3.0 rozpoczyna synchronizację z prędkością nie większą niż 115200 baud; na 460800 przełącza się później. Przyczyna różnicy między komputerami pozostaje nieustalona. Pakietów sterowników i lokalnych konfiguracji diagnostycznych nie dołączono do repo.

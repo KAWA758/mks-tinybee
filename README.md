@@ -15,6 +15,8 @@ Wymagane biblioteki SPI, EEPROM, ArduinoOTA, ESPmDNS, WiFi, FS, SPIFFS i Wire do
 
 ## Budowanie
 
+Do ręcznych testów służy [aplikacja Windows TinyBee Console](tools/windows-console/README.md): port COM, ruchy X/Y/Z, terminal G-code, parametry runtime i edytor RobotSettings.h. Zbuduj ją skryptem `tools/windows-console/build.ps1`; nie wymaga instalowania dodatkowych pakietów.
+
 Pełny przewodnik dla właściciela: [uruchomienie i obsługa projektu](docs/uruchomienie.md). Dla autora aplikacji Windows sterowanej padem: [kontrakt serial/G-code](docs/serial-protocol.md).
 
 Do oddzielnego sprawdzenia USB i wgrywania służy [minimalny test serial bez Marlina](tools/serial-smoke-test/README.md). Wgranie testu zastępuje aplikację ramienia.

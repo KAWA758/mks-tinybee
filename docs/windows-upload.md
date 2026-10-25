@@ -27,14 +27,14 @@ pio run -d tools/serial-smoke-test -t upload --upload-port COM14
 pio device monitor --port COM14 --baud 115200
 ```
 
-Na płycie po potwierdzonej próbie działa test serial, który nie obsługuje G-code. Aby przywrócić Marlin, zamknij monitor i wgraj z głównego folderu repo:
+Wgranie testu serial zastępuje Marlina. Aby wrócić do firmware ramienia, zamknij monitor i wgraj z głównego folderu repo:
 
 ```powershell
 pio run -e mks_tinybee -t upload --upload-port COM14
 pio device monitor --port COM14 --baud 250000
 ```
 
-Marlin z tą integracją jest sprawdzany kompilacyjnie; potwierdzony zapis i wykonanie na sprzęcie dotyczą programu minimalnego. Po wgraniu Marlina ponownie ustal fizyczne odniesienie ramienia.
+Po scaleniu PR #1 wgrano także Marlin 2.1.2.5 z `main`, commit `2e22719` (25.10.2026). Upload na COM14 przy 115200 baud zakończył się SUCCESS i weryfikacją danych flash. Przy 250000 baud potwierdzono M115 oraz `ok` dla M503 i M114. Na płycie po tej weryfikacji działa Marlin, a nie program minimalny. Ruchów nie wykonywano; fizyczne odniesienie ramienia pozostaje do ustalenia.
 
 Testy logiki resetu (bez płyty):
 

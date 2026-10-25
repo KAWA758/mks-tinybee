@@ -21,7 +21,7 @@ Do oddzielnego sprawdzenia USB i wgrywania służy [minimalny test serial bez Ma
 
 [Poprawka resetu CH340 w Windows](docs/windows-upload.md) jest włączona dla środowiska TinyBee. Wgranie i wykonanie programu minimalnego potwierdzono na sprzęcie; Marlin pozostaje bez testów ruchowych.
 
-Firmware nie został jeszcze wgrany ani przetestowany ruchowo. Parametry ramienia edytuj w **[Marlin/RobotSettings.h](Marlin/RobotSettings.h)**; [opis wszystkich ustawień](docs/parametry.md). Domyślny profil rozruchowy: około 15,802469 impulsu/°, maks. 2°/s, przyspieszenie 10°/s², tymczasowe granice ±5° i brak automatycznego zwalniania silników. Założenie mikrokroku 1/8 wymaga sprawdzenia na sprzęcie.
+Marlin 2.1.2.5 został wgrany 25.10.2026 z `main` (commit `2e22719`); potwierdzono odpowiedzi M115/M503/M114 przez COM14 przy 250000 baud. Nie wykonano testów ruchowych. Parametry ramienia edytuj w **[Marlin/RobotSettings.h](Marlin/RobotSettings.h)**; [opis wszystkich ustawień](docs/parametry.md). Domyślny profil rozruchowy: około 15,802469 impulsu/°, maks. 2°/s, przyspieszenie 10°/s², tymczasowe granice ±5° i brak automatycznego zwalniania silników. Założenie mikrokroku 1/8 wymaga sprawdzenia na sprzęcie.
 
 Zainstaluj PlatformIO Core lub rozszerzenie PlatformIO IDE do VS Code. W VS Code otwórz główny folder repozytorium, zawierający `platformio.ini`.
 

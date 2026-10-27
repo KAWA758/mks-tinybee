@@ -42,4 +42,4 @@ Paski pod pozycją pokazują okno `soft_limits` odczytane z płyty (`$/axes/*/�
 | `grbl.js` | Czysta logika: parsowanie odpowiedzi, linie `$J=`, mapowanie pada |
 | `sim.js` | Symulator FluidNC dla `?sim` |
 
-Testy logiki: `node --test tools/tests/grbl.test.mjs`. Interfejs sprawdzono w headless Chrome na symulatorze; na prawdziwej płycie jeszcze nie.
+Testy logiki: `node --test tools/tests/grbl.test.mjs`. Interfejs sprawdzono w headless Chrome na symulatorze. Strona nie zmienia linii DTR/RTS po otwarciu portu: ich kolejna zmiana w Chrome resetowała ESP32 przez obwód auto-resetu (jak w [windows-upload.md](../docs/windows-upload.md)).

@@ -56,8 +56,9 @@ async function connect() {
     alert('Cannot open the port: ' + err.message + '\nClose pio device monitor or any other program using it.');
     return;
   }
-  // Release EN/GPIO0 together so the ESP32 is not reset (see docs/windows-upload.md).
-  await port.setSignals({ dataTerminalReady: false, requestToSend: false }).catch(() => {});
+  // Leave DTR/RTS as open() set them, like pio device monitor. setSignals changes
+  // them one at a time, which pulses EN through the auto-reset circuit and
+  // resets the ESP32 (see docs/windows-upload.md).
   s.port = port;
   s.writer = port.writable.getWriter();
   s.pending = [];
@@ -69,6 +70,10 @@ async function connect() {
   realtime(RT.status);
   queryProfile();
   render();
+  setTimeout(() => {
+    if (s.port === port && s.status.state === 'Connecting')
+      log('The board is not answering. Click Disconnect, unplug and replug the USB cable, then Connect again.', 'err');
+  }, 3000);
 }
 
 async function disconnect(reason) {

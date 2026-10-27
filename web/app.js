@@ -11,7 +11,7 @@ const RX_BUDGET = 127;
 const STATUS_MS = 200;
 const REPLY_TIMEOUT_MS = 5000;
 // Shown in the console so a stale cached copy of the page is easy to spot.
-const VERSION = 'web 5 (paced, waits for board)';
+const VERSION = 'web 6 (DTR+RTS on)';
 const CH340 = { usbVendorId: 0x1a86, usbProductId: 0x7523 };
 const NAMES = { Z: 'Base', X: 'Joint 1', Y: 'Joint 2' };
 
@@ -76,9 +76,17 @@ async function connect() {
     alert('Cannot open the port: ' + err.message + '\nClose pio device monitor or any other program using it.');
     return;
   }
-  // Leave DTR/RTS as open() set them, like pio device monitor. setSignals changes
-  // them one at a time, which pulses EN through the auto-reset circuit and
-  // resets the ESP32 (see docs/windows-upload.md).
+  // End with DTR and RTS both asserted, as pyserial and pio device monitor do.
+  // On the TinyBee auto-reset circuit, RTS without DTR holds EN low; Chrome on
+  // Windows appears to open the CH340 that way, so the board never answered.
+  // DTR first, then RTS: this order never passes through the RTS-only state.
+  // If the board was being held in reset it boots now and reports Alarm.
+  try {
+    await port.setSignals({ dataTerminalReady: true });
+    await port.setSignals({ requestToSend: true });
+  } catch (err) {
+    log('could not set DTR/RTS: ' + err.message, 'err');
+  }
   s.port = port;
   s.writer = port.writable.getWriter();
   s.pending = [];

@@ -4,6 +4,10 @@ import { AXES, RT, PROFILE_KEYS, axisProfile, classifyLine, gamepadInput, jogLin
 // at most JOG_INFLIGHT unacknowledged, then 0x85 on release.
 const JOG_DT = 0.1;
 const JOG_INFLIGHT = 3;
+// Character counting: FluidNC's UART receive buffer is 256 bytes (esp32/fnc_uart.cpp).
+// Bursting more than that overflows it and the board stops answering, so lines
+// wait in an outbox until the unacknowledged bytes fit in RX_BUDGET.
+const RX_BUDGET = 127;
 const STATUS_MS = 200;
 const REPLY_TIMEOUT_MS = 5000;
 const CH340 = { usbVendorId: 0x1a86, usbProductId: 0x7523 };
@@ -14,7 +18,8 @@ const encoder = new TextEncoder();
 
 const s = {
   port: null, writer: null, reader: null, writeChain: Promise.resolve(),
-  pending: [],             // line commands awaiting ok/error, oldest first
+  outbox: [],              // line commands not yet sent
+  pending: [],             // sent line commands awaiting ok/error, oldest first
   status: { state: 'Disconnected' }, wco: [0, 0, 0], pos: null,
   settings: { X: {}, Y: {}, Z: {} }, profile: {},
   armed: false, held: { X: 0, Y: 0, Z: 0 },
@@ -36,10 +41,23 @@ function sendLine(line, { jog = false, quiet = false } = {}) {
     if (!quiet) log('not connected — click Connect first (' + line + ' not sent)', 'err');
     return;
   }
-  s.pending.push({ line, jog, quiet, at: performance.now() });
+  s.outbox.push({ line, jog, quiet, bytes: encoder.encode(line + '\n') });
   if (!quiet) log('> ' + line, 'tx');
-  writeBytes(encoder.encode(line + '\n'));
+  pump();
 }
+
+function pump() {
+  let used = s.pending.reduce((n, p) => n + p.bytes.length, 0);
+  while (s.writer && s.outbox.length && (used === 0 || used + s.outbox[0].bytes.length <= RX_BUDGET)) {
+    const item = s.outbox.shift();
+    item.at = performance.now();
+    s.pending.push(item);
+    used += item.bytes.length;
+    writeBytes(item.bytes);
+  }
+}
+
+function queued() { return [...s.pending, ...s.outbox]; }
 
 async function connect() {
   if (!('serial' in navigator)) {
@@ -62,6 +80,7 @@ async function connect() {
   s.port = port;
   s.writer = port.writable.getWriter();
   s.pending = [];
+  s.outbox = [];
   s.status = { state: 'Connecting' };
   log('connected', 'sys');
   readLoop(port);
@@ -72,7 +91,7 @@ async function connect() {
   render();
   setTimeout(() => {
     if (s.port === port && s.status.state === 'Connecting')
-      log('The board is not answering. Click Disconnect, unplug and replug the USB cable, then Connect again.', 'err');
+      log('The board is not answering. Click Disconnect, press RESET on the TinyBee (replugging USB is not enough while the main supply is on), then Connect again.', 'err');
   }, 3000);
 }
 
@@ -86,6 +105,7 @@ async function disconnect(reason) {
   try { await s.writeChain; writer?.releaseLock(); } catch {}
   try { await port?.close(); } catch {}
   s.pending = [];
+  s.outbox = [];
   disarm();
   s.status = { state: 'Disconnected' };
   s.pos = null;
@@ -137,6 +157,7 @@ function handleLine(line) {
       } else if (done && !done.jog && !done.quiet) {
         log(line, 'rx');
       }  // an ok with nothing pending answers a line sent before a board restart
+      pump();
       return;
     }
     case 'alarm':
@@ -147,6 +168,7 @@ function handleLine(line) {
     case 'banner':
       // Board restarted: queued commands are gone and position is unknown.
       s.pending = [];
+      s.outbox = [];
       stopJog();
       disarm();
       log(line, 'sys');
@@ -176,7 +198,7 @@ function onStatus(status) {
   if (status.wco) s.wco = status.wco;
   s.pos = status.mpos ?? status.wpos?.map((w, i) => w + s.wco[i]) ?? s.pos;
   s.status = status;
-  if (s.waitIdle && status.state === 'Idle' && !s.pending.some(p => p.jog)) s.waitIdle = false;
+  if (s.waitIdle && status.state === 'Idle' && !queued().some(p => p.jog)) s.waitIdle = false;
   if (s.armed && !['Idle', 'Jog'].includes(status.state)) disarm();
   render();
 }
@@ -210,8 +232,8 @@ function jogTick() {
     return;
   }
   if (s.waitIdle || !['Idle', 'Jog'].includes(s.status.state)) return;
-  if (s.pending.some(p => !p.jog)) return;  // let typed commands finish first
-  if (s.pending.length >= JOG_INFLIGHT) return;
+  if (queued().some(p => !p.jog)) return;  // let typed commands finish first
+  if (s.outbox.length || s.pending.length >= JOG_INFLIGHT) return;
   const line = jogLine(v, JOG_DT);
   if (!line) return;
   sendLine(line, { jog: true, quiet: true });
@@ -219,6 +241,7 @@ function jogTick() {
 }
 
 function stopJog() {
+  s.outbox = s.outbox.filter(p => !p.jog);
   if (s.jogging || s.status.state === 'Jog') {
     realtime(RT.jogCancel);
     s.waitIdle = true;
@@ -227,6 +250,7 @@ function stopJog() {
 }
 
 function stopAll() {
+  s.outbox = s.outbox.filter(p => !p.jog);
   realtime(RT.jogCancel);
   if (s.status.state === 'Run') realtime(RT.hold);  // a G-code move, not a jog
   s.held = { X: 0, Y: 0, Z: 0 };
@@ -383,6 +407,7 @@ function bind() {
     if (first && performance.now() - first.at > REPLY_TIMEOUT_MS) {
       log('no reply to "' + first.line + '"; not resending', 'err');
       s.pending.shift();
+      pump();
     }
   }, 1000);
   setInterval(() => { if (!s.port) { pollGamepad(); render(); } }, 250);

@@ -7,12 +7,16 @@ import { AXES } from './grbl.js';
 const PROFILE = { max_rate_mm_per_min: '120.000', max_travel_mm: '10.000', soft_limits: 'true',
   'homing/mpos_mm': '-5.000', 'homing/positive_direction': 'false' };
 const MIN = -5, MAX = 5, ACCEL = 10;
+// Like the real board: 256-byte receive buffer, lines handled one at a time.
+// Overflow wedges input, as seen on the TinyBee, and is reported as an error.
+const RX_SIZE = 256, LINE_MS = 5;
 
 class FakeFluidNC {
   constructor(emit) {
     this.emit = emit;
     this.boot();
     setInterval(() => this.step(0.02), 20);
+    setInterval(() => this.nextLine(), LINE_MS);
   }
 
   boot() {
@@ -20,7 +24,8 @@ class FakeFluidNC {
     this.queue = [];      // {target, feed}
     this.speed = 0;
     this.state = 'Alarm';
-    this.line = '';
+    this.rx = [];
+    this.wedged = false;
     this.emit("\r\nGrbl 4.1 [FluidNC v4.1.1 (sim) '$' for help]\r\n[MSG:INFO: ALARM: Unhomed]\r\nALARM:14\r\n");
   }
 
@@ -31,9 +36,19 @@ class FakeFluidNC {
       else if (b === 0x21) this.state = this.state === 'Idle' ? 'Hold' : this.state;
       else if (b === 0x7e && this.state === 'Hold') this.state = 'Idle';
       else if (b === 0x18) this.reset();
-      else if (b === 0x0a) { this.command(this.line.trim()); this.line = ''; }
-      else if (b !== 0x0d) this.line += String.fromCharCode(b);
+      else if (this.rx.length >= RX_SIZE) {
+        if (!this.wedged) console.error('sim: board receive buffer overflow; board stops answering');
+        this.wedged = true;
+      } else this.rx.push(b);
     }
+  }
+
+  nextLine() {
+    if (this.wedged) return;
+    const end = this.rx.indexOf(0x0a);
+    if (end < 0) return;
+    const line = String.fromCharCode(...this.rx.splice(0, end + 1)).trim();
+    this.command(line);
   }
 
   status() {

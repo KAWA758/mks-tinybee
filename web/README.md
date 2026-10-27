@@ -42,4 +42,4 @@ Paski pod pozycją pokazują okno `soft_limits` odczytane z płyty (`$/axes/*/�
 | `grbl.js` | Czysta logika: parsowanie odpowiedzi, linie `$J=`, mapowanie pada |
 | `sim.js` | Symulator FluidNC dla `?sim` |
 
-Testy logiki: `node --test tools/tests/grbl.test.mjs`. Interfejs sprawdzono w headless Chrome na symulatorze. Strona nie zmienia linii DTR/RTS po otwarciu portu: ich kolejna zmiana w Chrome resetowała ESP32 przez obwód auto-resetu (jak w [windows-upload.md](../docs/windows-upload.md)).
+Testy logiki: `node --test tools/tests/grbl.test.mjs`. Interfejs sprawdzono w headless Chrome na symulatorze. Strona wysyła komendy z liczeniem znaków (maks. 127 niepotwierdzonych bajtów): bufor odbiorczy FluidNC ma 256 B, a jego przepełnienie blokowało odpowiedzi płyty; symulator ma ten sam limit. Strona nie zmienia linii DTR/RTS po otwarciu portu: ich kolejna zmiana w Chrome resetowała ESP32 przez obwód auto-resetu (jak w [windows-upload.md](../docs/windows-upload.md)).

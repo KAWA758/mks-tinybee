@@ -10,6 +10,8 @@ const JOG_INFLIGHT = 3;
 const RX_BUDGET = 127;
 const STATUS_MS = 200;
 const REPLY_TIMEOUT_MS = 5000;
+// Shown in the console so a stale cached copy of the page is easy to spot.
+const VERSION = 'web 5 (paced, waits for board)';
 const CH340 = { usbVendorId: 0x1a86, usbProductId: 0x7523 };
 const NAMES = { Z: 'Base', X: 'Joint 1', Y: 'Joint 2' };
 
@@ -82,12 +84,11 @@ async function connect() {
   s.pending = [];
   s.outbox = [];
   s.status = { state: 'Connecting' };
-  log('connected', 'sys');
+  log('connected — ' + VERSION, 'sys');
   readLoop(port);
   s.timers.push(setInterval(() => realtime(RT.status), STATUS_MS));
   s.timers.push(setInterval(jogTick, JOG_DT * 1000));
-  realtime(RT.status);
-  queryProfile();
+  realtime(RT.status);  // the profile is queried once the board answers, see onStatus
   render();
   setTimeout(() => {
     if (s.port === port && s.status.state === 'Connecting')
@@ -197,7 +198,9 @@ function alarmHint(code) {
 function onStatus(status) {
   if (status.wco) s.wco = status.wco;
   s.pos = status.mpos ?? status.wpos?.map((w, i) => w + s.wco[i]) ?? s.pos;
+  const first = s.status.state === 'Connecting';
   s.status = status;
+  if (first) queryProfile();
   if (s.waitIdle && status.state === 'Idle' && !queued().some(p => p.jog)) s.waitIdle = false;
   if (s.armed && !['Idle', 'Jog'].includes(status.state)) disarm();
   render();
@@ -405,9 +408,13 @@ function bind() {
   setInterval(() => {
     const first = s.pending[0];
     if (first && performance.now() - first.at > REPLY_TIMEOUT_MS) {
-      log('no reply to "' + first.line + '"; not resending', 'err');
-      s.pending.shift();
-      pump();
+      // Everything still queued is unanswered too; drop it in one go, never resend.
+      const lost = queued().filter(p => !p.quiet).map(p => p.line);
+      log('The board stopped answering commands (waited for "' + first.line + '"' +
+        (lost.length ? '; not sent: ' + lost.join(', ') : '') +
+        '). Disconnect, press RESET on the TinyBee, then Connect again.', 'err');
+      s.pending = [];
+      s.outbox = [];
     }
   }, 1000);
   setInterval(() => { if (!s.port) { pollGamepad(); render(); } }, 250);

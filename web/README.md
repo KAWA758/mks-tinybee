@@ -8,10 +8,12 @@ Wymagany **Chrome lub Edge** (Firefox i Safari nie mają Web Serial). Zamknij `p
 
 ```powershell
 $py = "$env:USERPROFILE\.platformio\penv\Scripts\python.exe"
-& $py -m http.server 8000 --bind 127.0.0.1 -d web
+& $py tools\serve_web.py
 ```
 
-Otwórz **http://localhost:8000** i kliknij **Connect**, a potem wybierz `USB-SERIAL CH340`. Web Serial działa tylko z `localhost` lub HTTPS, a nie z pliku otwartego dwuklikiem. Serwer zatrzymuje Ctrl+C w PowerShell.
+Otwórz **http://localhost:8000** i kliknij **Connect**, a potem wybierz `USB-SERIAL CH340`. Web Serial działa tylko z `localhost` lub HTTPS, a nie z pliku otwartego dwuklikiem. Serwer zatrzymuje Ctrl+C w PowerShell. `serve_web.py` wyłącza cache przeglądarki; zwykłe `python -m http.server` pozwalało przeglądarce używać starej wersji `app.js` po `git pull`. Pierwsza linia konsoli strony podaje wersję (`connected — web …`).
+
+**Diagnostyka bez przeglądarki:** `& $py tools\serial_check.py --port COM3` powtarza sekwencję połączenia strony (status i 15 zapytań o ustawienia). PASS oznacza, że płyta i łącze są sprawne.
 
 **Symulator bez płyty:** http://localhost:8000/?sim. To fałszywy FluidNC z tym samym oknem ±5°, do nauki obsługi i dla autora aplikacji.
 

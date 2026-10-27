@@ -1,0 +1,93 @@
+board: MKS TinyBee V1.0
+name: Ramie XYZ TinyBee
+meta: profil rozruchowy, bez testow ruchowych
+
+# JEDYNE miejsce edycji parametrow ramienia. Po zmianie: tools/fluidnc.py upload-config.
+# X = naped przegubu 1, Y = naped przegubu 2, Z = obrot podstawy.
+# 1 jednostka G-code = 1 stopien wyjscia przekladni (FluidNC nadal pisze "mm").
+# Komentarze tylko w osobnych liniach; FluidNC nie obsluguje komentarza po wartosci.
+#
+# steps_per_mm = 200 krokow x 8 mikrokrokow x 32/9 zebow / 360 = 15.802469 impulsu/stopien.
+# Zalozenie mikrokroku 1/8 (TMC2209 MS1=MS2=0) wymaga sprawdzenia na sprzecie.
+# max_rate 120 = 2 stopnie/s; acceleration 10 stopni/s^2.
+#
+# Brak krancowek: homing.cycle 0 i allow_single_axis false blokuja ruch bazowania.
+# must_home true: po starcie stan Alarm; $X potwierdza, ze ramie stoi w pozycji odniesienia.
+# Pozycja maszynowa po restarcie ESP32 wynosi 0 dla kazdej osi.
+# Granice: positive_direction false, mpos_mm -5, max_travel 10 -> okno -5..+5 stopni.
+#
+# Kierunek: FluidNC ustawia DIR wysoko dla ruchu ujemnego; Marlin odwrotnie.
+# ":low" na direction_pin odtwarza dotychczasowe INVERT_DIR=false (X i Z).
+
+kinematics:
+  Cartesian:
+
+stepping:
+  engine: I2S_STATIC
+  idle_ms: 255
+  pulse_us: 4
+  dir_delay_us: 1
+  disable_delay_us: 0
+
+i2so:
+  bck_pin: gpio.25
+  data_pin: gpio.27
+  ws_pin: gpio.26
+
+axes:
+  x:
+    steps_per_mm: 15.802469
+    max_rate_mm_per_min: 120.000
+    acceleration_mm_per_sec2: 10.000
+    max_travel_mm: 10.000
+    soft_limits: true
+    homing:
+      cycle: 0
+      allow_single_axis: false
+      positive_direction: false
+      mpos_mm: -5.000
+    motor0:
+      hard_limits: false
+      stepstick:
+        step_pin: I2SO.1
+        direction_pin: I2SO.2:low
+        disable_pin: I2SO.0
+
+  y:
+    steps_per_mm: 15.802469
+    max_rate_mm_per_min: 120.000
+    acceleration_mm_per_sec2: 10.000
+    max_travel_mm: 10.000
+    soft_limits: true
+    homing:
+      cycle: 0
+      allow_single_axis: false
+      positive_direction: false
+      mpos_mm: -5.000
+    motor0:
+      hard_limits: false
+      stepstick:
+        step_pin: I2SO.4
+        direction_pin: I2SO.5
+        disable_pin: I2SO.3
+
+  z:
+    steps_per_mm: 15.802469
+    max_rate_mm_per_min: 120.000
+    acceleration_mm_per_sec2: 10.000
+    max_travel_mm: 10.000
+    soft_limits: true
+    homing:
+      cycle: 0
+      allow_single_axis: false
+      positive_direction: false
+      mpos_mm: -5.000
+    motor0:
+      hard_limits: false
+      stepstick:
+        step_pin: I2SO.7
+        direction_pin: I2SO.8:low
+        disable_pin: I2SO.6
+
+start:
+  must_home: true

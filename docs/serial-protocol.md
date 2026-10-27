@@ -1,52 +1,60 @@
-# Kontrakt aplikacja Windows — firmware, wersja 0.1
+# Kontrakt aplikacja Windows — firmware, wersja 0.2 (FluidNC)
 
-Status: kontrakt do implementacji i testów; brak testu na fizycznej płycie. Autor aplikacji może już budować połączenie, parser i symulator. Sterowanie sprzętem wymaga ukończonej kalibracji opisanej w `uruchomienie.md`.
+Status: kontrakt do implementacji i testów na symulatorze; FluidNC nie był jeszcze testowany na płycie. Wersja 0.1 dotyczyła Marlina i jest nieaktualna (historia Git).
 
 ## Podział odpowiedzialności
 
-Firmware: impulsy STEP/DIR, skoordynowana realizacja zadanych ruchów osi, ograniczenia prędkości/przyspieszeń, granice ustawione w firmware. Aplikacja Windows: pad, mapowanie wejść, profil sprzętu, pozycja odniesienia, kontrola zakresów/kolizji, planowanie krótkich ruchów i serial. Nie trzeba implementować aplikacji w tym repo; można utrzymywać oddzielne repo i uzgadniać wersję tego kontraktu.
+Firmware (FluidNC v4.1.1): impulsy STEP/DIR, planowanie ruchu, limity prędkości/przyspieszeń, okno `soft_limits`, natychmiastowe komendy czasu rzeczywistego. Aplikacja: pad, mapowanie wejść, potwierdzenie odniesienia, kontrola kolizji X/Y, generowanie jog i serial.
 
-Na start aplikacja działa w trybie przegubowym: X = napęd pierwszego przegubu, Y = drugiego, Z = obrót podstawy. W profilu skalibrowanym 1 jednostka G-code = 1° wyjścia przekładni. Odczytuj M503 i sprawdzaj profil przed odblokowaniem ruchu. Bieżące domyślne M92 jest wyliczane z RobotSettings.h (około 15,802469 dla każdej osi przy obecnych założeniach). Sprawdź zgodność z fizycznym mikrokrokiem; sam G21 nie ustawia skali. Domyślne limity testowe to ±5°, prędkości 2°/s i przyspieszenia 10°/s²; źródłem aktualnych wartości jest plik, nie stała zaszyta w aplikacji.
-
-Tryb kartezjański pozostaje niedostępny do zatwierdzenia kinematyki. Aplikacja ma używać odrębnych nazw, np. `baseAngle`, `joint1DriveAngle`, `joint2DriveAngle` oraz `radiusMm`, `heightMm`. Nie traktować G-code Z jako wysokości. Mechaniczne poziomowanie głowicy nie oznacza kompensacji X:Y równej 1:1. Długości 120/120 mm są potwierdzone, lecz zera i relacja napędów do kątów członów wymagają pomiaru. Jedna interpolowana linia ruchu przegubów nie gwarantuje prostej trajektorii głowicy.
+Tryb przegubowy: X = napęd pierwszego przegubu, Y = drugiego, Z = obrót podstawy. 1 jednostka = 1° wyjścia przekładni; F w °/min. Aplikacja używa nazw `baseAngle`, `joint1DriveAngle`, `joint2DriveAngle`; tryb kartezjański (`radiusMm`, `heightMm`) pozostaje zablokowany do zatwierdzenia kinematyki. Parametry odczytuj z płyty (`$CD`), nie zaszywaj ich w aplikacji.
 
 ## Port i protokół
 
-- Port wybierany przez użytkownika, np. COM7. Tylko jeden proces otwiera port: aplikacja albo PlatformIO monitor/upload.
-- 250000 baud, 8N1, bez sprzętowego flow control; komendy ASCII zakończone LF. Odbiornik toleruje CRLF i fragmentację danych w dowolnym miejscu linii.
-- Otwieranie portu/DTR/RTS może zresetować ESP32. Nie traktować otwarcia portu jako gotowości. Po restarcie odrzucić poprzednie kolejki i uznać pozycję za nieznaną.
-- Jeden zapisujący worker, jedna ścieżka parsowania odpowiedzi. Tryb podstawowy bez N/checksum; jeśli pojawi się `Resend:`, przerwać sesję i ponownie zsynchronizować, zamiast wymyślać numery.
-- Komendy wysyłane kolejno po `ok`. `ok` może zawierać dodatkowe pola. `echo:`, `busy:`, `wait`, raporty pozycji i bootlog nie są potwierdzeniem komendy. `Error:` zatrzymuje nadawanie i wymaga obsługi błędu.
-- Timeout konfigurowalny; dla M400 uwzględnić czas ruchu. Nie ponawiać automatycznie G0/G1 po timeout: ruch mógł zostać wykonany mimo utraconej odpowiedzi.
+- 115200 baud, 8N1, bez flow control. Linie zakończone LF; odbiornik toleruje CRLF i fragmentację.
+- Przy otwieraniu ustaw DTR i RTS nieaktywne, aby nie restartować ESP32. Restart = pozycja nieznana: odrzuć kolejki, wymagaj ponownego odniesienia.
+- Start: linia powitalna ma postać `Grbl … [FluidNC v4.1.1 …]`; wykrywaj fragment `[FluidNC`. Nie traktuj otwarcia portu jako gotowości; wyślij `?` i czekaj na raport.
+- Komendy liniowe (G-code, `$...`) potwierdza dokładnie jedno `ok` albo `error:N`. Wysyłaj kolejną po odpowiedzi (tryb prosty). `[MSG:...]`, `[GC:...]`, raporty `<...>` i `ALARM:N` nie są potwierdzeniem.
+- **Komendy czasu rzeczywistego** to pojedyncze bajty bez LF, wykonywane natychmiast, także gdy bufor jest pełny lub ruch trwa. Nie dostają `ok`:
 
-Sekwencja połączenia bez ruchu: synchronizacja po starcie, `M115`, `M503`, `M114`, każda komenda z potwierdzeniem. Nie wysyłać automatycznie M17, G28, G92, M18 ani ruchu. Użytkownik osobno zatwierdza profil kalibracji oraz fizyczny punkt odniesienia. EEPROM jest wyłączone, więc nadpisania runtime znikają po resecie i wracają stałe z RobotSettings.h.
+| Bajt | Działanie |
+| --- | --- |
+| `?` | Raport stanu `<Stan|MPos:x,y,z|FS:f,s|...>` |
+| `0x85` | Anulowanie jog: hamowanie z zadanym przyspieszeniem i czyszczenie kolejki jog |
+| `!` | Wstrzymanie (feed hold) z hamowaniem; `~` wznawia |
+| `0x18` (Ctrl-X) | Reset programowy; podczas ruchu zatrzymuje kroki natychmiast → ALARM:3, pozycja niepewna |
 
-## Potwierdzenie i zakończenie ruchu
+Stany w raporcie: `Idle`, `Jog`, `Run`, `Hold:n`, `Alarm`, `Home`, `Sleep`, `Door`, `Check`. Pozycja może przyjść jako `MPos` lub `WPos` (z `WCO`); parsuj oba. Raport `?` wolno wysyłać co 50–200 ms.
 
-`ok` po G1 oznacza przyjęcie/przetworzenie polecenia, a nie fizyczny koniec ruchu. `M400` z późniejszym `ok` oznacza opróżniony planner. Dopiero potem standardowe M114 nadaje się do uzgodnienia końcowej pozycji wyliczonej. M114 nadal nie wykrywa zgubionych kroków.
+## Sekwencja połączenia
 
-## Pad i ograniczenie kolejki
+1. Otwórz port bez resetu, wyślij `?`.
+2. Stan `Alarm` po starcie (ALARM:14 Unhomed) jest normalny. Aplikacja pokazuje stan „pozycja nieznana” i **nie wysyła automatycznie `$X`**.
+3. Użytkownik ustawia ramię w pozycji odniesienia według [uruchomienie.md](uruchomienie.md) i świadomie zatwierdza; dopiero wtedy aplikacja wysyła `$X`.
+4. Opcjonalnie `$CD` — sprawdzenie profilu (`steps_per_mm`, `max_rate_mm_per_min`, okno).
 
-Wymagane stany: rozłączony, połączony/pozycja nieznana, gotowy, ruch, błąd/utrata odniesienia. Ruch wyłącznie po świadomym uzbrojeniu, z przytrzymanym przyciskiem zezwolenia. Gałki mają martwą strefę, ograniczenie prędkości i łagodną zmianę wartości. Rozłączony pad, utrata fokusu lub puszczenie zezwolenia zerują żądane prędkości i usuwają niewysłane ruchy aplikacji. Nie wykonują automatycznie M18, ponieważ ramię może opaść.
+Nie wysyłaj automatycznie `$MD`, `$H`, `$Bye` ani ruchu.
 
-Pierwsza implementacja: pojedynczy segment trwający około 50–100 ms, potem M400 i dopiero po jego `ok` następny segment z NAJNOWSZEGO stanu pada. Nie magazynować próbek pada. To celowo prosty tryb startowy, może dawać przerwy między segmentami. Czas trzeba zweryfikować na sprzęcie z uwzględnieniem przyspieszeń, transmisji i opóźnień Windows; nie jest gwarantowanym czasem zatrzymania.
+## Jog z pada
 
-Nie wystarczy jeden G1 oczekujący na `ok`: planner może nadal gromadzić ruchy. Docelowe płynne sterowanie wymaga mierzonego, ograniczonego horyzontu ruchu; nie wysyłać G1 przy każdym zdarzeniu pada bez kontroli kolejki.
+Wzorzec Grbl „joystick jogging”:
 
-Do trybu ciągłego preferować krótkie cele absolutne G90 z lokalnie śledzonym celem, ograniczeniami i przeliczeniem prędkości na F (długość wektora przyrostu / czas × 60). Z góry ustalić jednostki profilu i ramę odniesienia. Nie mieszać G90/G91 między workerami. Nie zaokrąglać każdego małego przyrostu do całych kroków: akumulować ułamkowy cel.
+- Jog: `$J=G91 G21 X<dx> Y<dy> Z<dz> F<f>`. Krótkie przyrosty, np. `dt` = 50–100 ms: `d = v × dt`, `F = |v| × 60` (°/min), gdzie `|v|` to długość wektora prędkości w °/s.
+- Utrzymuj mały horyzont: maks. 2–3 jog bez `ok`. Nowy przyrost na podstawie NAJNOWSZEGO stanu pada; nie kolejkuj próbek.
+- Puszczenie gałki, puszczenie przycisku zezwolenia, utrata fokusu lub odłączenie pada: natychmiast `0x85`, wyczyść niewysłane przyrosty. Ramię hamuje z przyspieszeniem z konfiguracji.
+- Jog poza oknem `soft_limits` jest skracany do granicy (bez alarmu). G0/G1 poza oknem kończy się alarmem — w trybie pada używaj tylko `$J=`.
+- Ruch wyłącznie w stanie `Idle`/`Jog`, po świadomym uzbrojeniu i z przytrzymanym zezwoleniem.
 
-## Stop, utrata łączności i ograniczenia
+## Stop, utrata łączności
 
-- Normalne zatrzymanie pada: przestać generować segmenty; już przyjęty krótki segment może się dokończyć.
-- M410: szybkie zatrzymanie po obsłużeniu komendy. Usunąć niewysłaną kolejkę i uznać odniesienie za wymagające weryfikacji.
-- M112: pełne wyłączenie; może zwolnić napędy i spowodować opadnięcie ramienia. Wymaga restartu i ponownego odniesienia. Nie używać jako zwykłego STOP od puszczenia gałki.
-- Ten HAL ESP32 odrzuca EMERGENCY_PARSER podczas kompilacji (`Marlin/src/HAL/ESP32/inc/SanityCheck.h`). M112/M410 idą zwykłą ścieżką odbioru i nie mają gwarancji natychmiastowej obsługi. Szczególnie M400 może blokować ich wykonanie do końca ruchu. Priorytet wysyłki w aplikacji nie zmienia tej właściwości firmware.
-- Utrata USB nie zatrzymuje sama już przyjętej trajektorii. Obecny firmware nie ma wdrożonego watchdogu sterowania padem. Domyślnie timeout zwalniania napędów wynosi 0 (brak automatycznego zwalniania), co nie jest zabezpieczeniem ruchu.
-- Fizyczny sposób odcięcia napędu i podparcie mechanizmu są konieczne podczas testów. Nie deklarować programowego STOP jako sprzętowego E-stopu.
-- Po M18/M84, resecie, ręcznym ruchu albo zgubieniu kroków zablokować ruch do ponownego ustalenia pozycji. Domyślne granice ±5° względem roboczego zera nie opisują pełnej bezpiecznej przestrzeni ramienia.
+- Zwykłe zatrzymanie pada: `0x85`.
+- Pilne zatrzymanie z hamowaniem: `!`, potem `0x85` lub Ctrl-X, aby wyczyścić stan.
+- Ctrl-X podczas ruchu: natychmiastowe odcięcie kroków, możliwa utrata pozycji, ALARM:3. Wymaga ponownego odniesienia przed `$X`.
+- Utrata USB nie zatrzymuje już przyjętych przyrostów; dlatego horyzont jest krótki (≤ ~0,3 s ruchu).
+- `$MD` zwalnia napędy i ramię może opaść. Nie używać jako STOP.
+- Programowy stop nie jest sprzętowym E-stopem. Podczas testów wymagane fizyczne odcięcie zasilania napędów i podparcie.
 
 ## Kryteria odbioru frontendu
 
-Testy na symulatorze serial: odpowiedzi w fragmentach, kilka linii naraz, `ok` z polami, bootlog w środku sesji, timeout po przyjęciu G1, `Error:`, odłączenie USB/pada, utrata fokusu, puszczenie zezwolenia, brak automatycznych powtórek ruchu i brak narastania kolejki. Na sprzęcie: zgodność kierunków i skali, ponowne odniesienie po resecie, obserwowany czas zatrzymania przy maksymalnej dopuszczonej prędkości. Ruch kartezjański pozostaje zablokowany do oddzielnych testów geometrii.
+Symulator serial: odpowiedzi we fragmentach, kilka linii naraz, `ok` przeplatane raportami `<...>` i `[MSG:]`, `ALARM:N` w środku sesji, restart z linią powitalną, `error:N`, odłączenie USB/pada, utrata fokusu, puszczenie zezwolenia (`0x85` wysłany), ograniczenie horyzontu jog, brak automatycznego `$X`. Na sprzęcie: kierunki i skala, zachowanie na granicy okna, zmierzony czas i kąt hamowania po `0x85` przy maks. prędkości.
 
-Źródła: [M400](https://marlinfw.org/docs/gcode/M400.html), [M410](https://marlinfw.org/docs/gcode/M410.html), [M112](https://marlinfw.org/docs/gcode/M112.html). Zachowanie konkretnego HAL i dostępność funkcji sprawdzono również w źródłach tego repo.
+Źródła: [FluidNC wiki](https://github.com/bdring/FluidNC/wiki), [Grbl jogging](https://github.com/gnea/grbl/wiki/Grbl-v1.1-Jogging), [Grbl interface](https://github.com/gnea/grbl/wiki/Grbl-v1.1-Interface). Zachowanie stanów sprawdzono w źródłach FluidNC v4.1.1.

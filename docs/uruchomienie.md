@@ -1,90 +1,89 @@
-# Obsługa projektu i pierwsze uruchomienie
+# Obsługa projektu i pierwsze uruchomienie (FluidNC)
 
 ## Stan projektu
 
-Marlin 2.1.2.5 wgrano na płytę 25.10.2026 z `main`, commit `2e22719`. Upload przez COM14 zakończył się SUCCESS z weryfikacją danych flash. Przy 250000 baud potwierdzono odpowiedzi `ok` dla M115, M503 i M114; odczytano M92 X/Y/Z=15.80 (raport zaokrąglony), M203 X/Y/Z=2.00 oraz M201 X/Y/Z=10.00. Nie przeprowadzono testów ruchu na sprzęcie. Konfiguracja ma profil rozruchowy z `Marlin/RobotSettings.h`, opisany w [parametry.md](parametry.md). Nie jest jeszcze skalibrowana na sprzęcie.
+Repo przeszło z Marlina 2.1.2.5 na FluidNC v4.1.1. Marlin był wgrany 25.10.2026 i odpowiadał na M115/M503/M114; ruchów nie wykonywano. **FluidNC nie został jeszcze wgrany na płytę ani przetestowany ruchowo.** `fluidnc/config.yaml` to profil rozruchowy, sprawdzony tylko względem źródeł FluidNC v4.1.1.
 
-M114 po uruchomieniu zgłosiło X/Y/Z=-5.00; jest to stan logiczny firmware, nie pomiar położenia fizycznego. Przed pierwszym ruchem nadal trzeba świadomie ustalić punkt odniesienia. Nie wykonano G28, G92 ani ruchów podczas tej weryfikacji.
-
-Potwierdzone dane: człony 120/120 mm; Z = podstawa, X = pierwszy napęd przegubu, Y = drugi napęd przegubu; mechaniczne poziomowanie głowicy; brak enkoderów. Silnik z dostarczonej karty STEPPERONLINE 17HE15-1504S: 1,8° (200 pełnych kroków/obrót), 1,50 A, 2,30 Ω, 4,00 mH, moment trzymający 0,42 Nm. Potwierdzić, że wszystkie trzy silniki są tego samego typu.
+Potwierdzone dane: człony 120/120 mm; Z = podstawa, X = pierwszy napęd przegubu, Y = drugi; mechaniczne poziomowanie głowicy; brak enkoderów i krańcówek. Silnik STEPPERONLINE 17HE15-1504S: 1,8°, 1,50 A, 2,30 Ω, 4,00 mH, 0,42 Nm. Potwierdzić, że wszystkie trzy silniki są tego typu.
 
 ## Zworki i przelicznik
 
-Nie zmieniaj zworek na chybił trafił. Dla samego układu TMC2209 MS1=0 i MS2=0 daje 1/8 kroku, a MS1=1 i MS2=1 daje 1/16. OFF na płycie musi odpowiadać tym poziomom na konkretnym module; nie znamy jeszcze producenta i rewizji modułu. Nie zakładaj, że trzy zworki działają jak w A4988. Interpolacja do 256 mikrokroków nie zmienia liczby impulsów STEP potrzebnych do ruchu.
+TMC2209: MS1=MS2=0 daje 1/8, MS1=MS2=1 daje 1/16. Stan „OFF” na płycie musi odpowiadać tym poziomom na konkretnym module; nie znamy producenta modułu. Dla 1/8 i przekładni 9:32: `steps_per_mm = 15.802469` (impulsy/°). Prąd 1,50 A z karty nie oznacza Vref 1,50 V; w trybie STANDALONE prąd ustawia potencjometr modułu.
 
-Dla potwierdzonego mikrokroku 1/8 oraz przekładni 9 zębów na silniku / 32 zęby na wyjściu:
+## Narzędzia
 
-`steps_per_degree = (360 / 1.8) × 8 × (32 / 9) / 360 = 15.802469`
-
-Przy 1/16 wartość wynosi 31.604938. To przelicznik kąta napędzanego wyjścia przekładni, a nie automatycznie kąta między członami ani współrzędnej głowicy. Potwierdź przełożenie dla każdej osi.
-
-Prąd 1,50 A z karty nie jest poleceniem ustawienia Vref na 1,50 V. W trybie STANDALONE prąd ustala moduł, zwykle potencjometrem; potrzebne są jego dokumentacja, rezystory pomiarowe i chłodzenie. Ustawienie prądu przez UART w tym projekcie nie działa.
-
-## Pobranie i praca nad kodem
+Wymagany PlatformIO (VS Code lub Core). Używamy jego Pythona (ma pyserial) i esptool 3.0, z którym potwierdzono [obejście resetu CH340](windows-upload.md). Raz:
 
 ```powershell
-git clone https://github.com/KAWA758/mks-tinybee.git
-cd mks-tinybee
-git switch -c firmware/nazwa-zmiany
+$py = "$env:USERPROFILE\.platformio\penv\Scripts\python.exe"
+& $py -m pip install xmodem
 ```
 
-Otwórz ten główny folder w VS Code. Zainstaluj PlatformIO IDE. Wszystkie typowe parametry ruchu zmieniaj w `Marlin/RobotSettings.h`. `Configuration.h` i `Configuration_adv.h` są adapterami do Marlina; `ini/esp32.ini` zawiera konfigurację narzędzi PlatformIO. Zachowaj przypięte wersje narzędzi. Nie aktualizuj frameworka ESP32 niezależnie od Marlina.
+`tools/fluidnc.py` pobiera `fluidnc-v4.1.1-posix.zip` z GitHub do `.fluidnc/` (ignorowane przez Git) i sprawdza SHA-256 przed wgraniem.
 
-```powershell
-pio run -e mks_tinybee
-pio device list
-```
+## Pierwsza instalacja
 
-W terminalu PlatformIO polecenie `pio` jest dostępne. W innym PowerShell można zamiast niego użyć `& "$env:USERPROFILE\.platformio\penv\Scripts\platformio.exe"`.
+1. Wyłącz zasilanie silników albo odłącz silniki przy wyłączonym zasilaniu. Podeprzyj mechanizm. Zamknij monitory portu.
+2. Ustal port: `pio device list` (ostatnio COM14).
+3. Wgraj FluidNC, kasując Marlina, z systemem plików WebUI:
 
-Po zmianach firmware: kompilacja, opis założeń w dokumentacji, commit i pull request. Nie commituj `.pio`, logów, tokenów ani lokalnych ustawień portu COM. Zmiana jednostek, baudrate albo zachowania komend wymaga równoczesnej aktualizacji `serial-protocol.md` i uzgodnienia z autorem aplikacji.
+   ```powershell
+   & $py tools\fluidnc.py flash --port COM14 --erase --fs
+   ```
 
-## Wgranie
+   Oczekuj `TinyBee: simultaneous Windows CH340 DTR/RTS reset` i weryfikacji hash dla każdego obrazu.
+4. Wyślij konfigurację ramienia (restartuje płytę i wypisuje log startowy):
 
-1. Wyłącz zasilanie przed zmianą okablowania, zworek lub modułów. Nie odłączaj silników od zasilanych sterowników. Podeprzyj mechanizm.
-2. Pierwsze wgranie wykonaj bez możliwości niekontrolowanego ruchu ramienia, np. przy odłączonych silnikach, odłączonych wcześniej bez zasilania.
-3. Podłącz USB i ustal port przez `pio device list`. Zamknij aplikację sterującą i monitory portu.
-4. Wgraj, zastępując COM7 rzeczywistym portem:
+   ```powershell
+   & $py tools\fluidnc.py upload-config --port COM14
+   ```
 
-```powershell
-pio run -e mks_tinybee -t upload --upload-port COM7
-pio device monitor --port COM7 --baud 250000
-```
+   W logu nie może być `Config error` ani `ConfigAlarm`. Dla pewności w terminalu: `$SS` (log startu) i `$CD` (aktywna konfiguracja).
+5. **WiFi:** wersja wifi uruchamia punkt dostępu `FluidNC` z domyślnym hasłem `12345678`. Każdy w zasięgu mógłby sterować ramieniem. Od razu ustaw własne hasło `$AP/Password=...` albo wyłącz radio `$WiFi/Mode=Off`; następnie `$Bye`.
 
-Wgrywanie używa 115200 baud; komunikacja z działającym Marlinem używa 250000 baud. Jeśli upload nie działa, zachowaj pełny komunikat błędu; nie zmieniaj od razu wersji bibliotek.
+Terminal: `pio device monitor --port COM14 --baud 115200`. Tylko jeden program może mieć otwarty port.
 
-## Pierwsza sesja bez ruchu
+Kolejne aktualizacje firmware: `flash` bez `--erase --fs` (zachowuje `config.yaml` i ustawienia), albo OTA przez WebUI plikiem `.fluidnc/v4.1.1/wifi/firmware.bin`. `--fs` nadpisuje system plików i **usuwa `config.yaml` z płyty** — po nim zawsze `upload-config`.
 
-Wyślij osobno `M115`, `M503`, `M114`. Oczekuj odpowiedzi oraz `ok`. Odczyt M114 jest pozycją wyliczoną, nie pomiarem fizycznym. EEPROM_SETTINGS jest wyłączone: M500/M501 nie są sposobem zapisywania i przywracania kalibracji w tym buildzie.
+## Pozycja odniesienia bez krańcówek
+
+FluidNC liczy pozycję maszynową od zera w chwili startu ESP32. Konfiguracja ma `must_home: true`, więc po każdym starcie płyta jest w stanie `Alarm` (ALARM:14 Unhomed) i odrzuca ruch oraz jog. Procedura:
+
+1. W stanie Alarm: `$MD` zwalnia silniki. Podeprzyj ramię i ustaw ręcznie oznaczoną pozycję odniesienia.
+2. `$Bye` — restart; pozycja odniesienia staje się MPos 0,0,0. Po starcie sterowniki mogą od razu załączyć silniki — trzymaj podparcie.
+3. `?` powinno pokazać `<Alarm|MPos:0.000,0.000,0.000|...>`.
+4. `$X` — świadome potwierdzenie, że ramię stoi w pozycji odniesienia. Od tej chwili dozwolony ruch w oknie −5…+5° na każdej osi.
+
+Nie używaj `$X` po alarmie w trakcie ruchu (ALARM:3, Ctrl-X podczas ruchu) bez ponownego ustalenia odniesienia: pozycja mogła zostać utracona. `$H` nic nie przesuwa i kończy się błędem — to oczekiwane. Otwarcie portu przez program ustawiający DTR/RTS może zrestartować ESP32; wtedy wróć do kroku 1.
 
 ## Pierwszy ruch — dopiero po potwierdzeniu sprzętu
 
-Poniższy przykład wymaga trzech jednakowych silników 1,8°, mikrokroku 1/8 i przełożenia 9:32 na każdej osi. Nie wysyłaj go automatycznie przy każdym połączeniu. Parametry są ostrożnymi wartościami startowymi do testu, a nie zweryfikowanymi limitami mechanizmu.
+Wymaga trzech jednakowych silników 1,8°, mikrokroku 1/8 i przekładni 9:32. Od włączenia napędów nie przestawiaj ramienia ręcznie.
 
-Najpierw ustaw ręcznie bezpieczną, oznaczoną pozycję z luzem na mały ruch w obie strony i ponownie włącz napędy. Zapisz jej fizyczne położenie; robocze zero nie jest zerem geometrii z rysunku. Od chwili włączenia napędów nie przestawiaj ramienia ręcznie.
+Najpierw sama podstawa, pół stopnia z prędkością 0,5°/s:
 
-Bieżący build ma już obliczone M92 i niskie limity z RobotSettings.h. Najpierw sprawdź M503; nie nadpisuj go starym profilem z aplikacji. Poniżej równoważne nastawy startowe i ręczne ustalenie zera (wyślij po jednej linii, czekając na `ok`):
-
-```gcode
-M92 X15.802469 Y15.802469 Z15.802469
-M203 X2 Y2 Z2
-M201 X10 Y10 Z10
-M204 P10 T10
-G21
-G90
-G92 X0 Y0 Z0
+```
+$J=G91 G21 Z0.5 F30
+?
+$J=G91 G21 Z-0.5 F30
 ```
 
-Po tym profilu 1 jednostka oznacza 1° obrotu napędu. Marlin nadal opisuje ją jako mm. M203 jest w jednostkach/s, M201/M204 w jednostkach/s², a F w jednostkach/min. Sprawdź M503 przed ruchem.
+Jog można przerwać w każdej chwili bajtem `0x85` (anulowanie jog) albo `!` (wstrzymanie). Jeśli ruch nie odpowiada oczekiwaniu — przerwij kalibrację; kierunek zmienia `:low` przy `direction_pin`, skalę `steps_per_mm`. X i Y testuj osobno po zapewnieniu podparcia.
 
-Najpierw sprawdź samą podstawę: `G91`, następnie `G1 Z0.5 F30`, następnie `M400`. Dopiero po zakończeniu i ocenie fizycznego ruchu wróć przez `G1 Z-0.5 F30`, `M400`, `G90`. Daje to pół stopnia przy zadanej prędkości 0,5°/s. Jeśli ruch nie odpowiada oczekiwaniu, przerwij kalibrację.
-
-X i Y testuj osobno dopiero po zapewnieniu podparcia i sprawdzeniu kolizji mechanizmu. Nie uruchamiaj G28 bez działającego, skonfigurowanego bazowania. Nie wyłączaj globalnie limitów M211 w celu obejścia nieznanej geometrii. Obecne granice ±5° są tylko tymczasowym oknem rozruchowym i nie są potwierdzonymi zakresami mechaniki.
-
-Reset przywraca parametry wgrane z RobotSettings.h; trzeba ponownie ustalić fizyczną pozycję odniesienia. Zmiany parametrów dokonane G-code w poprzedniej sesji znikają. Po M18/M84, utracie kroków lub przestawieniu ręcznym pozycja fizyczna jest nieznana. Domyślnie ROBOT_IDLE_TIMEOUT_SEC=0: napędy nie zwalniają się automatycznie po bezczynności. Trzeba kontrolować temperaturę i świadomie zakończyć sesję. Jawne M18/M84 nadal zwalnia napędy i może spowodować opadnięcie ramienia.
+Nie wyłączaj `soft_limits`, żeby obejść nieznaną geometrię. Okno ±5° to ograniczenie rozruchowe, nie zmierzony zakres mechaniki.
 
 ## Dalsza kalibracja
 
-Zmierzyć rzeczywisty kąt po zadaniu znanego małego obrotu. Korekta: `nowe_steps = stare_steps × kąt_zadany / kąt_zmierzony`. Oddzielnie ustalić znaki napędów, zera geometrii, zakresy oraz kolizje zależne od pary X/Y. Zweryfikowane wartości wpisuj do RobotSettings.h i ponownie kompiluj/wgrywaj firmware.
+Zmierz rzeczywisty kąt po znanym obrocie; `nowe_steps = stare_steps × kąt_zadany / kąt_zmierzony`. Ustal znaki napędów, docelowe zero, zakresy i kolizje zależne od pary X/Y. Wpisz wartości do `fluidnc/config.yaml` (zakres: `mpos_mm` i `max_travel_mm`, patrz [parametry.md](parametry.md)) i wyślij `upload-config`.
 
-Źródła: [TMC2209, tabela konfiguracji MS1/MS2](https://www.analog.com/media/en/technical-documentation/data-sheets/tmc2209_datasheet_rev1.08.pdf), [polecenia Marlina](https://marlinfw.org/meta/gcode/).
+`idle_ms: 255` — silniki nie zwalniają się same; kontroluj temperaturę. `$MD` zwalnia napędy i ramię może opaść.
+
+## Praca nad repo
+
+```powershell
+git switch -c config/nazwa-zmiany
+```
+
+Po zmianach: test na sprzęcie, opis w dokumentacji, commit i pull request. Zmiana jednostek, prędkości portu lub zachowania komend wymaga aktualizacji [serial-protocol.md](serial-protocol.md) i uzgodnienia z autorem aplikacji. Nie commituj `.fluidnc/`, `.pio`, logów ani haseł WiFi.
+
+Źródła: [FluidNC wiki](https://github.com/bdring/FluidNC/wiki), [TMC2209, tabela MS1/MS2](https://www.analog.com/media/en/technical-documentation/data-sheets/tmc2209_datasheet_rev1.08.pdf).

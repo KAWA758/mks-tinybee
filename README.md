@@ -6,6 +6,7 @@ Konfiguracja [FluidNC](https://github.com/bdring/FluidNC) **v4.1.1** dla płyty 
 | --- | --- |
 | [fluidnc/config.yaml](fluidnc/config.yaml) | Jedyne miejsce parametrów ramienia: piny, kroki/°, prędkości, granice. |
 | [tools/fluidnc.py](tools/fluidnc.py) | Pobranie wydania, wgranie przez USB z poprawką CH340, wysłanie `config.yaml`. |
+| [web/](web/README.md) | Aplikacja WWW: sterowanie przegubami z przeglądarki (USB, Web Serial) i padem. |
 | [docs/uruchomienie.md](docs/uruchomienie.md) | Pierwsza instalacja, ustalanie odniesienia, pierwszy ruch. |
 | [docs/parametry.md](docs/parametry.md) | Opis każdego ustawienia w `config.yaml`. |
 | [docs/serial-protocol.md](docs/serial-protocol.md) | Kontrakt dla aplikacji Windows sterowanej padem. |
@@ -38,8 +39,9 @@ $py = "$env:USERPROFILE\.platformio\penv\Scripts\python.exe"
 ## Stan
 
 - Konfiguracja: profil rozruchowy, około 15,802469 impulsu/°, maks. 2°/s, 10°/s², okno ±5° wokół pozycji z chwili startu, silniki bez automatycznego zwalniania.
-- Nie wgrano jeszcze FluidNC na płytę; brak testów ruchowych. Mikrokrok 1/8 i kierunki wymagają sprawdzenia na sprzęcie.
-- Testy jednostkowe narzędzi: `python -m unittest discover -s tools/tests -v`.
+- Mikrokrok 1/8, kierunki i skala wszystkich osi nadal wymagają pomiaru.
+- FluidNC wgrany na płytę (COM3); jog podstawy i okno ±5° działają na sprzęcie.
+- Testy: `python -m unittest discover -s tools/tests -v` oraz `node --test tools/tests/grbl.test.mjs`.
 
 ## Historia: Marlin
 

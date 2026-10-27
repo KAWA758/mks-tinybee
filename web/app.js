@@ -32,7 +32,10 @@ function writeBytes(bytes) {
 function realtime(byte) { writeBytes(Uint8Array.of(byte)); }
 
 function sendLine(line, { jog = false, quiet = false } = {}) {
-  if (!s.writer) return;
+  if (!s.writer) {
+    if (!quiet) log('not connected — click Connect first (' + line + ' not sent)', 'err');
+    return;
+  }
   s.pending.push({ line, jog, quiet, at: performance.now() });
   if (!quiet) log('> ' + line, 'tx');
   writeBytes(encoder.encode(line + '\n'));
@@ -354,7 +357,8 @@ function bind() {
     const input = $('#cmd');
     const line = input.value.trim();
     if (!line) return;
-    if (line === '?' || line === '!' || line === '~') realtime(line.charCodeAt(0));
+    if (!s.writer) log('not connected — click Connect first (' + line + ' not sent)', 'err');
+    else if (line === '?' || line === '!' || line === '~') realtime(line.charCodeAt(0));
     else sendLine(line);
     input.value = '';
   });

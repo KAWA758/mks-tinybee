@@ -1,8 +1,8 @@
 # Minimalny test USB / ESP32
 
-Samodzielny projekt PlatformIO, bez kodu Marlina. Raz na sekundę wypisuje przez UART0 `TINYBEE_SERIAL_TEST heartbeat=... uptime_ms=...`. Nie konfiguruje GPIO napędów, grzałek ani diod. Nie odbiera G-code i nie służy do sterowania ramieniem.
+Samodzielny projekt PlatformIO, bez firmware ramienia. Raz na sekundę wypisuje przez UART0 `TINYBEE_SERIAL_TEST heartbeat=... uptime_ms=...`. Nie konfiguruje GPIO napędów, grzałek ani diod. Nie odbiera G-code i nie służy do sterowania ramieniem.
 
-Wgranie zastępuje działającą aplikację oraz tablicę partycji; nie jest aktualizacją konfiguracji Marlina. Podeprzyj ramię i zapewnij brak możliwości niekontrolowanego ruchu podczas resetów. Nie jest to pełne kasowanie flash.
+Wgranie zastępuje działającą aplikację oraz tablicę partycji; nie jest aktualizacją konfiguracji ramienia. Podeprzyj ramię i zapewnij brak możliwości niekontrolowanego ruchu podczas resetów. Nie jest to pełne kasowanie flash.
 
 Z głównego folderu repozytorium:
 
@@ -18,18 +18,13 @@ Projekt korzysta z [obejścia resetu CH340 w Windows](../../docs/windows-upload.
 
 Sukces wymaga zakończonego zapisu i weryfikacji przez esptool oraz kolejnych komunikatów heartbeat po restarcie. Jeśli błąd występuje już na `Connecting` / `Wrong boot mode`, program nie został jeszcze uruchomiony: przyczyna leży przed etapem wykonania aplikacji.
 
-Powrót do projektu ramienia (z głównego folderu repo):
-
-```powershell
-pio run -e mks_tinybee -t upload --upload-port COM13
-pio device monitor --port COM13 --baud 250000
-```
+Powrót do firmware ramienia (FluidNC, z głównego folderu repo): `tools\fluidnc.py flash --port COM13 --erase --fs`, a następnie `tools\fluidnc.py upload-config --port COM13` — szczegóły w [uruchomienie.md](../../docs/uruchomienie.md).
 
 Po powrocie ponownie ustal fizyczną pozycję odniesienia. Wyniki kompilacji `.pio` pozostają ignorowane w Git.
 
 ## Weryfikacja 25.10.2026
 
-**Po dodaniu jednoczesnego resetu DTR/RTS: upload na COM14 zakończony SUCCESS przy 115200 baud, zapis zweryfikowany przez esptool, po restarcie odczytano heartbeat 60, 61, 62, 63.** Płyta zgłosiła ESP32-D0WD rev. 1 i flash 8 MB. Sterownik CH340: 3.9.2024.9. Szczegóły integracji i powrotu do Marlina: [windows-upload.md](../../docs/windows-upload.md).
+**Po dodaniu jednoczesnego resetu DTR/RTS: upload na COM14 zakończony SUCCESS przy 115200 baud, zapis zweryfikowany przez esptool, po restarcie odczytano heartbeat 60, 61, 62, 63.** Płyta zgłosiła ESP32-D0WD rev. 1 i flash 8 MB. Sterownik CH340: 3.9.2024.9. Szczegóły integracji i powrotu do firmware ramienia: [windows-upload.md](../../docs/windows-upload.md).
 
 ### Wcześniejsze próby bez obejścia resetu
 

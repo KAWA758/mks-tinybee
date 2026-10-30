@@ -10,7 +10,7 @@ Wynik wskazuje na wrażliwość sekwencyjnego resetu na tym zestawie komputer/US
 
 ## Jak działa obejście
 
-`buildroot/share/PlatformIO/scripts/tinybee_upload.py` przekierowuje istniejący uploader `esptool.py` do `tools/tinybee_esptool.py`. Zachowuje argumenty, pliki, adresy pamięci i weryfikację oryginalnego esptool 3.0. Nie modyfikuje zainstalowanych pakietów PlatformIO.
+`tools/fluidnc.py flash` uruchamia esptool 3.0 z PlatformIO przez `tools/tinybee_esptool.py`. W projekcie PlatformIO (test serial) to samo robi `tools/tinybee_upload.py`, przekierowując uploader `esptool.py`. Zachowuje argumenty, pliki, adresy pamięci i weryfikację oryginalnego esptool 3.0. Nie modyfikuje zainstalowanych pakietów PlatformIO.
 
 Wyłącznie na Windows i dla CH340 VID:PID `1A86:7523` launcher odczytuje rejestr sterowania modemem. Jeśli jego układ odpowiada znanym stanom DTR/RTS i nie ma innych ustawionych bitów, wykonuje przejścia 2 → 1 → 0, bez stanu pośredniego między resetem a wejściem w download. Synchronizacja i zapis są następnie wykonywane przez oryginalny esptool.
 
@@ -20,23 +20,19 @@ Rejestr MCR ma układ zależny od sterownika, dlatego nie należy kopiować zapi
 
 ## Użycie
 
-Obejście jest dołączone do środowiska `mks_tinybee` i projektu testowego. Wybierz rzeczywisty port, aktualnie COM14:
+Obejście jest używane przez `tools/fluidnc.py flash` (FluidNC) i projekt testowy. Wybierz rzeczywisty port, aktualnie COM14:
 
 ```powershell
+$py = "$env:USERPROFILE\.platformio\penv\Scripts\python.exe"
+& $py tools\fluidnc.py flash --port COM14
 pio run -d tools/serial-smoke-test -t upload --upload-port COM14
-pio device monitor --port COM14 --baud 115200
 ```
 
-Wgranie testu serial zastępuje Marlina. Aby wrócić do firmware ramienia, zamknij monitor i wgraj z głównego folderu repo:
+Wgranie testu serial zastępuje firmware ramienia. Powrót: `fluidnc.py flash --port COM14 --erase --fs`, potem `upload-config` (patrz [uruchomienie.md](uruchomienie.md)).
 
-```powershell
-pio run -e mks_tinybee -t upload --upload-port COM14
-pio device monitor --port COM14 --baud 250000
-```
+Historia: po scaleniu PR #1 wgrano tym obejściem Marlin 2.1.2.5 z `main`, commit `2e22719` (25.10.2026); upload na COM14 przy 115200 baud zakończył się SUCCESS z weryfikacją flash. FluidNC tym obejściem jeszcze nie wgrywano.
 
-Po scaleniu PR #1 wgrano także Marlin 2.1.2.5 z `main`, commit `2e22719` (25.10.2026). Upload na COM14 przy 115200 baud zakończył się SUCCESS i weryfikacją danych flash. Przy 250000 baud potwierdzono M115 oraz `ok` dla M503 i M114. Na płycie po tej weryfikacji działa Marlin, a nie program minimalny. Ruchów nie wykonywano; fizyczne odniesienie ramienia pozostaje do ustalenia.
-
-Testy logiki resetu (bez płyty):
+Testy logiki resetu i argumentów wgrywania (bez płyty):
 
 ```powershell
 python -m unittest discover -s tools/tests -v
